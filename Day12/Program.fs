@@ -42,24 +42,19 @@ let partOne map =
     traverse "start" map
 
 let partTwo map =
+    let checkAndSum node m f = 
+        match Map.tryFind node m with
+        | Some nodes -> nodes |> List.map f |> List.sum
+        | None -> 0
     let rec traverse node visits found m =
         if "end" = node 
         then 1
         else
             match isLowerCase node, Set.contains node visits, found with
             | true, true, true -> 0
-            | true, true, false ->
-                match Map.tryFind node m with
-                | Some nodes -> nodes |> List.map (fun n -> traverse n visits true (Map.remove node m)) |> List.sum
-                | None -> 0
-            | true, false, _ -> 
-                match Map.tryFind node m with
-                | Some nodes -> nodes |> List.map (fun n -> traverse n (Set.add node visits) found m) |> List.sum
-                | None -> 0
-            | false, _, _ -> 
-                match Map.tryFind node m with
-                | Some nodes -> nodes |> List.map (fun n -> traverse n visits found m) |> List.sum
-                | None -> 0
+            | true, true, false -> checkAndSum node m (fun n -> traverse n visits true (Map.remove node m))
+            | true, false, _ -> checkAndSum node m (fun n -> traverse n (Set.add node visits) found m)
+            | false, _, _ -> checkAndSum node m (fun n -> traverse n visits found m)
     traverse "start" Set.empty false map
 
 input
