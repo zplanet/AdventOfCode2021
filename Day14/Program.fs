@@ -9,43 +9,49 @@ let (|RuleExp|) s =
 let input = 
     Path.Combine(Directory.GetCurrentDirectory(), "input.txt")
     |> File.ReadLines
-    |> Seq.toList
 
-let template = 
-    input |> List.head |> Seq.toList
+let template = input |> Seq.head
 
 let rules =
-    input |> List.tail |> List.tail
-    |> List.map (function | RuleExp r -> r)
-    |> List.choose id
-    |> List.fold (fun m (p, c) -> Map.add (Seq.head p, Seq.head (Seq.tail p)) (Seq.head c) m) Map.empty
+    input |> Seq.tail |> Seq.tail
+    |> Seq.map (function | RuleExp r -> r)
+    |> Seq.choose id
+    |> Seq.fold (fun m (p, c) -> Map.add (Seq.head p, Seq.head (Seq.tail p)) (Seq.head c) m) Map.empty
 
-let step t = 
-    let rec iter r = function
-        | e1::e2::tl -> 
-            match Map.tryFind (e1, e2) rules with
-            | Some c -> iter (c::e1::r) (e2::tl)
-            | None -> iter (e1::r) (e2::tl) 
-        | e1::tl -> iter (e1::r) tl
-        | [] -> r
-    iter [] t
-    |> List.rev
+let max = Seq.maxBy snd >> snd
+let min = Seq.minBy snd >> snd
 
-let steps n t =
-    [ 1 .. n ]
-    |> List.fold
-        (fun acc _ -> step acc)
-        t
-
-let max = List.maxBy snd >> snd
-let min = List.minBy snd >> snd
+let add cnt pair m =
+    Map.change pair (function | Some n -> Some (n + cnt) | None -> Some (cnt)) m
 
 let calc n =
+    let rec iter cnt m =
+        if cnt < n then
+            m 
+            |> Map.toSeq
+            |> Seq.fold 
+                (fun m' ((p1,p2), cnt) -> 
+                    match Map.tryFind (p1,p2) rules with
+                    | Some c -> m' |> add cnt (p1,c) |> add cnt (c,p2)
+                    | None -> m')
+                Map.empty
+            |> iter (cnt+1) 
+        else 
+            m
+            |> Map.toSeq
+            |> Seq.map (fun ((p1,_),cnt) -> (p1,cnt))
+            |> Seq.fold (fun acc (c,n) -> Map.change c (function | Some v -> Some (n+v) | None -> Some n) acc) Map.empty
+            |> Map.change (Seq.last template) (function | Some n -> Some (n+1UL) | None -> None)
+            |> Map.toSeq
+            |> (fun l -> (max l) - (min l))
+
     template
-    |> steps n
-    |> List.groupBy id
-    |> List.map (fun (c, ls) -> (c, List.length ls))
-    |> (fun ls -> (max ls) - (min ls))
+    |> Seq.pairwise
+    |> Seq.fold (fun m pair -> add 1UL pair m) Map.empty
+    |> iter 0
 
 calc 10
 |> printfn "part one: %A"
+
+calc 40
+|> printfn "part two: %A"
