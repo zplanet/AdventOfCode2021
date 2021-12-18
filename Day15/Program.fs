@@ -50,10 +50,34 @@ let calc map =
 
     iter map (Map.empty.Add(Coord (1, 1), { Visited=false; Cost=0; From=(Coord (1, 1)) }))
 
+let x5 map =
+    let nextRisk cr d = 
+        let nr = (cr + d) % 9
+        if 0 = nr then 9 else nr
+    let next dr dc drisk =
+        Map.fold 
+            (fun s (Coord (cr,cc)) risk -> Map.add (Coord (cr+dr,cc+dc)) (nextRisk risk drisk) s) 
+            Map.empty
+
+    [0..4]
+    |> List.map (fun n -> next (length * n) 0 n map)
+    |> List.map (fun m -> [0..4] |> List.map (fun n -> next 0 (length * n) n m))
+    |> List.concat
+    |> List.fold (fun s m -> Map.fold (fun acc k v -> Map.add k v acc) s m) Map.empty
+
+// input
+// |> calc
+// |> (fun table -> 
+//     match Map.tryFind (Coord (length, length)) table with
+//     | Some v -> Some v
+//     | None -> None)
+// |> printfn "part one: %A"
+
 input
+|> x5
 |> calc
 |> (fun table -> 
-    match Map.tryFind (Coord (length, length)) table with
+    match Map.tryFind (Coord (length * 5, length * 5)) table with
     | Some v -> Some v
     | None -> None)
-|> printfn "part one: %A"
+|> printfn "part two: %A"
